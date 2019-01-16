@@ -32,7 +32,8 @@ do_cat(FILE *f)
 {
     int c;
 
-    while ((c = fgetc(f)) != EOF) {
+    while ((c = fgetc(f)) != EOF)	//EOF에 도달할 때 까지 fgetc()를 반복 
+	 {
         if (putchar(c) < 0) exit(1);
     }
 }
