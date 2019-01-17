@@ -9,10 +9,10 @@
 #include <sys/types.h>
 #include <regex.h> 		//Regulation Expression
 // regcomp, regfree, regexec, regerror
-#include <unistd>	//for getopt()
+#include <unistd.h>	//for getopt()
 
 
-static void do_grep(regex_t *pat, FILE *f);
+static void do_grep(regex_t *pat, FILE *f,int invert_mode);
 
 int
 main(int argc, char *argv[])
@@ -22,7 +22,14 @@ main(int argc, char *argv[])
     int i;
 
 	 int opt;
-	 int flag;
+	 int V_mode = 0;
+	 int cnt = 0;
+	 int flag;	 //regcomp의 인자인 flag로 I 옵션 처리가능
+
+	 //EX == 1
+	 //NL == 4
+	 //ICASE == 2
+	 //NOSUB == 8
 
 
 
@@ -31,22 +38,25 @@ main(int argc, char *argv[])
 	 // 모든 옵션을 반환하면 -1 반환. 따라서 -1까지 while loop
 	 // 옵션 뒤에 인자를 받지 않으면 "Iv"라고 하면되는데 순서 상관 x
 	 // 옵션 뒤에 인자를 받으면 옵션문자뒤에 ":"를 붙이면된다.
-	 while((opt = getopt(argc, argv, "I:v:"))!=-1)
+	 while((opt = getopt(argc, argv, "Iv"))!=-1)
 	 {
 		 switch(opt){
 			 case 'I':
 				 // -I옵션을 처리하는 코드
 
+				 cnt = 1;
 				 flag = REG_ICASE;
 				 break;
 			 case 'v':
 				 // -v옵션을 처리하는 코드
-
+				 V_mode = 1;
+				 cnt = 1;
 				 break;
 			 case '?':
 				 // 잘못된 옵션을 처리하는 코드
+				 fprintf(stderr, "Usage: %s [-Iv] [<file>..]\n",argv[0]);
 
-				 break;
+				 exit(1);
 		 }
 	 }
 
@@ -72,7 +82,7 @@ main(int argc, char *argv[])
         fputs("no pattern\n", stderr);
         exit(1);
     }
-    err = regcomp(&pat, argv[1], REG_EXTENDED | REG_NOSUB | REG_NEWLINE |flag);	//두 번째 인자로 넘어온 정규표현식 argv[1]를 전용데이터 형식인 regex_t로 변환한다. 변환결과는 regex_t type인 pat에 기록된다.
+    err = regcomp(&pat, argv[1+cnt], REG_EXTENDED | REG_NOSUB | REG_NEWLINE |flag);	//두 번째 인자로 넘어온 정규표현식 argv[1]를 전용데이터 형식인 regex_t로 변환한다. 변환결과는 regex_t type인 pat에 기록된다.
 	 // 이때 첫 번째 인자인 pat의 메모리 영역은 호출하기 전에 할당하여 그 포인터를 전달해야 하는데, 그외에도 regcomp()가 독자적으로 메모리를 확보하게 된다. 동적할당이니 free필요하겠지? free의 동작은 regfree로!
 
 
@@ -84,13 +94,13 @@ main(int argc, char *argv[])
         exit(1);
     }
 
-    if (optind == argc)	// 지정된 파일이 없을 경우 
+    if ((argc==2)||((argc==3)&&(cnt==1)))	// 지정된 파일이 없을 경우 
 	 {
-        do_grep(&pat, stdin);	//출력창에서 입력한 정규식이 있는지 확인
+        do_grep(&pat, stdin, V_mode);	//출력창에서 입력한 정규식이 있는지 확인
     }
 
     else {	//지정한 파일이 있는 경우
-        for (i = 2; i < argc; i++) {
+        for (i = 2+cnt; i < argc; i++) {
             FILE *f;
             
             f = fopen(argv[i], "r");
@@ -98,7 +108,7 @@ main(int argc, char *argv[])
                 perror(argv[i]);
                 exit(1);
             }
-            do_grep(&pat, f);
+            do_grep(&pat, f, V_mode);
             fclose(f);
         }
     }
@@ -109,13 +119,17 @@ main(int argc, char *argv[])
 
 
 static void
-do_grep(regex_t *pat, FILE *src)	//이 함수가 호출되는시점에 정규표현식은 regex_t형식으로 변환되어 있음.
+do_grep(regex_t *pat, FILE *src, int invert_mode)	//이 함수가 호출되는시점에 정규표현식은 regex_t형식으로 변환되어 있음.
 {
     char buf[4096];
 
     while (fgets(buf, sizeof buf, src)) {	//src에서 한 줄씩 읽으면서
-        if (regexec(pat, buf, 0, NULL, 0) == 0) {	//regexec()는 컴파일된 정규식 형식을 가지고 주어진 문자열에서 정규식에 해당하는 값을 찾음
-            fputs(buf, stdout);	//해당하는 값을 찾으면 출력한다.
-        }
+        if ((regexec(pat, buf, 0, NULL, 0) == 0)&&!(invert_mode)) 
+			  fputs(buf, stdout);	//해당하는 값을 찾으면 출력한다.
+
+		  if ((regexec(pat,buf,0,NULL,0)!=0)&&invert_mode)	//V_mode가 참이고  해당하는 패턴이 없을 때를 출력하면 invert mode
+			  fputs(buf, stdout);
+				  
+        
     }
 }

@@ -18,7 +18,7 @@ main(int argc, char *argv[])
         fputs("no pattern\n", stderr);
         exit(1);
     }
-    err = regcomp(&pat, argv[1], REG_EXTENDED | REG_NOSUB | REG_NEWLINE);	//두 번째 인자로 넘어온 정규표현식 argv[1]를 전용데이터 형식인 regex_t로 변환한다. 변환결과는 regex_t type인 pat에 기록된다.
+    err = regcomp(&pat, argv[1], REG_EXTENDED | REG_NOSUB | REG_NEWLINE | 2 );	//두 번째 인자로 넘어온 정규표현식 argv[1]를 전용데이터 형식인 regex_t로 변환한다. 변환결과는 regex_t type인 pat에 기록된다.
 	 // 이때 첫 번째 인자인 pat의 메모리 영역은 호출하기 전에 할당하여 그 포인터를 전달해야 하는데, 그외에도 regcomp()가 독자적으로 메모리를 확보하게 된다. 동적할당이니 free필요하겠지? free의 동작은 regfree로!
 
 
