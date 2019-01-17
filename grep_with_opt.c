@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <regex.h> 		//Regulation Expression
 // regcomp, regfree, regexec, regerror
+#include <unistd>	//for getopt()
+
 
 static void do_grep(regex_t *pat, FILE *f);
 
@@ -19,11 +21,58 @@ main(int argc, char *argv[])
     int err;
     int i;
 
+	 int opt;
+	 int flag;
+
+
+
+	 // getopt은 호출될 때 인자로 넘겨진 뒤 옵션 문자를 반환한다.
+	 // 잘못된 옵션이 발견된 경우는 '?'를 반환
+	 // 모든 옵션을 반환하면 -1 반환. 따라서 -1까지 while loop
+	 // 옵션 뒤에 인자를 받지 않으면 "Iv"라고 하면되는데 순서 상관 x
+	 // 옵션 뒤에 인자를 받으면 옵션문자뒤에 ":"를 붙이면된다.
+	 while((opt = getopt(argc, argv, "I:v:"))!=-1)
+	 {
+		 switch(opt){
+			 case 'I':
+				 // -I옵션을 처리하는 코드
+
+				 flag = REG_ICASE;
+				 break;
+			 case 'v':
+				 // -v옵션을 처리하는 코드
+
+				 break;
+			 case '?':
+				 // 잘못된 옵션을 처리하는 코드
+
+				 break;
+		 }
+	 }
+
+
+	 //옵션들을 처리하는 방법(관련 전역 변수들)
+	 // 1) optarg : 현재 처리중인 옵션의 파라미터
+	 // 2) optind : 현재 처리중인 옵션의 argv 인덱스
+	 // 3) optopt : 현재 처리중인 옵션 문자
+	 // 4) opterr : 이 값이 '참'이면 getopt()가 에러 메시지를 표시
+	 
+	 
+
+
+
+
+
+
+
+
+
+
     if (argc < 2) {
         fputs("no pattern\n", stderr);
         exit(1);
     }
-    err = regcomp(&pat, argv[1], REG_EXTENDED | REG_NOSUB | REG_NEWLINE);	//두 번째 인자로 넘어온 정규표현식 argv[1]를 전용데이터 형식인 regex_t로 변환한다. 변환결과는 regex_t type인 pat에 기록된다.
+    err = regcomp(&pat, argv[1], REG_EXTENDED | REG_NOSUB | REG_NEWLINE |flag);	//두 번째 인자로 넘어온 정규표현식 argv[1]를 전용데이터 형식인 regex_t로 변환한다. 변환결과는 regex_t type인 pat에 기록된다.
 	 // 이때 첫 번째 인자인 pat의 메모리 영역은 호출하기 전에 할당하여 그 포인터를 전달해야 하는데, 그외에도 regcomp()가 독자적으로 메모리를 확보하게 된다. 동적할당이니 free필요하겠지? free의 동작은 regfree로!
 
 
@@ -34,9 +83,12 @@ main(int argc, char *argv[])
         puts(buf);
         exit(1);
     }
-    if (argc == 2) {
+
+    if (optind == argc)	// 지정된 파일이 없을 경우 
+	 {
         do_grep(&pat, stdin);	//출력창에서 입력한 정규식이 있는지 확인
     }
+
     else {	//지정한 파일이 있는 경우
         for (i = 2; i < argc; i++) {
             FILE *f;
@@ -52,4 +104,18 @@ main(int argc, char *argv[])
     }
     regfree(&pat);	//regcomp가 독자적으로 확보한 메모리인 pat를 해제
     exit(0);
+}
+
+
+
+static void
+do_grep(regex_t *pat, FILE *src)	//이 함수가 호출되는시점에 정규표현식은 regex_t형식으로 변환되어 있음.
+{
+    char buf[4096];
+
+    while (fgets(buf, sizeof buf, src)) {	//src에서 한 줄씩 읽으면서
+        if (regexec(pat, buf, 0, NULL, 0) == 0) {	//regexec()는 컴파일된 정규식 형식을 가지고 주어진 문자열에서 정규식에 해당하는 값을 찾음
+            fputs(buf, stdout);	//해당하는 값을 찾으면 출력한다.
+        }
+    }
 }
