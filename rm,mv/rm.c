@@ -1,5 +1,5 @@
-//system call rmdir()로 빈 디렉토리를 ㅇ삭제하는 명령어 rmdir
-
+//unlink()를 이용해서 만든 rm 명령어
+//파일을 삭제한다는 것은 실체에 붙인 이름이 개수를 줄인다는 뜻이다. 이를 위햇 사용되는 시스템 콜은 unlink()
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,8 +15,7 @@ main(int argc, char *argv[])
         exit(1);
     }
     for (i = 1; i < argc; i++) {
-        if (rmdir(argv[i]) < 0)	// rmdir을 성공하면 0을 반환하고 실패하면 -1 반환, 그에 따른 errno 설정
-		  {
+        if (unlink(argv[i]) < 0) {
             perror(argv[i]);
             exit(1);
         }
